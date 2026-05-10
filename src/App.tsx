@@ -51,7 +51,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard onNavigate={setActiveTab} />;
+        return <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} />;
       case "builder":
         return <VideoBuilder />;
       case "queue":
@@ -65,7 +65,7 @@ export default function App() {
       case "scheduler":
         return <UploadScheduler />;
       default:
-        return <Dashboard onNavigate={setActiveTab} />;
+        return <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} />;
     }
   };
 

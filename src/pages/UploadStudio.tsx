@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Upload, Sparkles, Calendar, Video, User } from "lucide-react";
-
-const API = "http://localhost:3000";
-
-type Account = { id: string; name: string; subscribers?: string | number };
-type Job = { id: string; file: string; status: string };
+import { Account, RenderJob } from "../types";
 
 const QUICK_1080_PRESET = {
   resolution: "1920x1080",
@@ -17,7 +13,7 @@ const QUICK_1080_PRESET = {
 
 export default function UploadStudio() {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<RenderJob[]>([]);
 
   const [accountId, setAccountId] = useState("");
   const [video, setVideo] = useState("");
@@ -40,8 +36,8 @@ export default function UploadStudio() {
     setIsLoading(true);
     try {
       const [accRes, jobRes] = await Promise.all([
-        fetch(`${API}/api/accounts`),
-        fetch(`${API}/api/jobs`),
+        fetch('/api/accounts'),
+        fetch('/api/jobs'),
       ]);
 
       if (!accRes.ok || !jobRes.ok) {
@@ -63,7 +59,7 @@ export default function UploadStudio() {
     void loadData();
   }, [loadData]);
 
-  const generateTitle = () => setTitle("🔥 Viral Relaxing Music for Deep Sleep (10 Hours)");
+  const generateTitle = () => setTitle("Viral Relaxing Music for Deep Sleep (10 Hours)");
   const generateTags = () => setTags("sleep,relax,meditation,calm,lofi,deep sleep");
 
   const upload = async () => {
@@ -74,7 +70,7 @@ export default function UploadStudio() {
 
     setIsUploading(true);
     try {
-      const res = await fetch(`${API}/api/upload-youtube`, {
+      const res = await fetch('/api/upload-youtube', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -93,7 +89,7 @@ export default function UploadStudio() {
         throw new Error(`Upload gagal (${res.status})`);
       }
 
-      alert("🚀 Upload success (1080p quick preset)");
+      alert("Upload success (1080p quick preset)");
     } catch (error) {
       console.error(error);
       alert("Upload gagal. Cek log console/server.");
@@ -103,7 +99,7 @@ export default function UploadStudio() {
   };
 
   const generateBulk = async () => {
-    const res = await fetch(`${API}/api/bulk-schedule`, {
+    const res = await fetch('/api/bulk-schedule', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ startDate: schedule, intervalHours: interval, total }),
@@ -117,8 +113,8 @@ export default function UploadStudio() {
   return (
     <div className="p-8 text-white space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold cyber-header">🚀 Upload Studio</h1>
-        <p className="text-gray-500 text-sm">Fast 1080p preset (CPU-safe) → Upload → Schedule</p>
+        <h1 className="text-2xl font-bold cyber-header">Upload Studio</h1>
+        <p className="text-gray-500 text-sm">Fast 1080p preset (CPU-safe) - Upload - Schedule</p>
       </div>
 
       <div className="cyber-panel p-4 space-y-2">
@@ -142,7 +138,7 @@ export default function UploadStudio() {
         <select className="cyber-input" value={video} onChange={(e) => setVideo(e.target.value)}>
           <option value="">Select video</option>
           {doneJobs.map((j) => (
-            <option key={j.id} value={j.file}>
+            <option key={j.id} value={j.file ?? ''}>
               {j.file}
             </option>
           ))}

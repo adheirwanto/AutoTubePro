@@ -12,8 +12,6 @@ import {
   Calendar
 } from 'lucide-react';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -23,7 +21,7 @@ import {
   Area
 } from 'recharts';
 
-const MOCK_USAGE = Array.from({ length: 20 }, (_, i) => ({
+const MOCK_USAGE: UsagePoint[] = Array.from({ length: 20 }, (_, i) => ({
   time: i,
   cpu: Math.floor(Math.random() * 30) + 20,
   ram: Math.floor(Math.random() * 20) + 40,
@@ -33,65 +31,37 @@ interface DashboardProps {
   onNavigate: (tab: string) => void;
 }
 
+interface UsagePoint {
+  time: number;
+  cpu: number;
+  ram: number;
+}
+
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const [usage, setUsage] = useState(MOCK_USAGE);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    // Initial delay to avoid polling during system boot/restart
-    const timeout = setTimeout(() => {
-      interval = setInterval(async () => {
-        try {
-          const res = await fetch('/api/system/usage');
-          if (!res.ok) {
-            // Silence noise for 404/503 during startup
-            if (res.status !== 404 && res.status !== 503) {
-              console.warn(`Usage fetch status: ${res.status}`);
-            }
-            return;
-          }
-          
-          const contentType = res.headers.get("content-type");
-          const rawText = await res.text();
-          const text = rawText ? rawText.trim() : "";
-
-          if (!contentType || !contentType.includes("application/json")) {
-            // Only log if it's not a common error page
-            if (!text.includes("<!DOCTYPE html>") && !text.includes("<html")) {
-              console.error("Server returned non-JSON response:", text.slice(0, 100));
-            }
-            return;
-          }
-
-          if (!text || text === "undefined" || text === "null") return;
-          
-          let data;
-          try {
-            data = JSON.parse(text);
-          } catch (e) {
-            // Already caught by global override but safe to handle locally
-            return;
-          }
-          
-          if (data && typeof data.cpu === 'number') {
-            setUsage(prev => {
-              const next = [...prev.slice(1), {
-                time: prev[prev.length - 1].time + 1,
-                cpu: Math.round(data.cpu),
-                ram: Math.round(data.ram),
-              }];
-              return next;
-            });
-          }
-        } catch (e) {
-          // Silent during startup failures
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/system/usage');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && typeof data.cpu === 'number') {
+          setUsage(prev => {
+            const next = [...prev.slice(1), {
+              time: prev[prev.length - 1].time + 1,
+              cpu: Math.round(data.cpu),
+              ram: Math.round(data.ram),
+            }];
+            return next;
+          });
         }
-      }, 2000);
-      
-      return () => clearInterval(interval);
-    }, 2000); // Increased delay
+      } catch {
+        // Silent on fetch failure
+      }
+    }, 2000);
 
-    return () => clearTimeout(timeout);
+    return () => clearInterval(interval);
   }, []);
 
   return (

@@ -7,26 +7,25 @@ import {
   RefreshCw,
   BadgeCheck
 } from 'lucide-react';
-
-const API = "http://localhost:3000";
+import { Account, Project } from '../types';
 
 export default function AccountManager() {
 
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
 
   // ================= LOAD =================
   const loadAccounts = async () => {
-    const res = await fetch(`${API}/api/accounts`);
+    const res = await fetch('/api/accounts');
     const data = await res.json();
     setAccounts(data);
   };
 
   const loadProjects = async () => {
-    const res = await fetch(`${API}/api/projects`);
+    const res = await fetch('/api/projects');
     const data = await res.json();
     setProjects(data);
   };
@@ -46,7 +45,7 @@ export default function AccountManager() {
       return;
     }
 
-    await fetch(`${API}/api/projects`, {
+    await fetch('/api/projects', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,12 +62,12 @@ export default function AccountManager() {
 
   // ================= DELETE =================
   const deleteAccount = async (id: string) => {
-    await fetch(`${API}/api/accounts/${id}`, { method: "DELETE" });
+    await fetch(`/api/accounts/${id}`, { method: "DELETE" });
     loadAccounts();
   };
 
   const deleteProject = async (id: string) => {
-    await fetch(`${API}/api/projects/${id}`, { method: "DELETE" });
+    await fetch(`/api/projects/${id}`, { method: "DELETE" });
     loadProjects();
   };
 
@@ -134,7 +133,7 @@ export default function AccountManager() {
 
                 <button
                   onClick={() => {
-                    window.open(`${API}/auth/youtube/${p.id}`, "_blank");
+                    window.open(`/auth/youtube/${p.id}`, "_blank");
                   }}
                   className="cyber-button flex-1 text-xs py-2 flex items-center justify-center"
                 >
@@ -229,7 +228,7 @@ export default function AccountManager() {
       {/* FOOTER */}
       <div className="cyber-panel p-6">
         <p className="text-sm text-gray-400">
-          Multi OAuth siap. Tinggal lanjut ke auto upload 🔥
+          Multi OAuth siap. Tinggal lanjut ke auto upload
         </p>
       </div>
 
