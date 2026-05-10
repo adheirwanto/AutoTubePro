@@ -1,20 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-
-type Job = {
-  id: string;
-  status: string;
-  progress?: number;
-  file?: string | null;
-  error?: string | null;
-  duration?: number;
-};
+import type { RenderJob } from "../types";
 
 type UploadResult = {
   video: string;
   audio?: string | null;
 };
-
-const API = ""; // pakai Vite proxy (/api -> localhost:3000)
 
 // Durasi looping (detik)
 const DURATION_OPTIONS = [
@@ -44,18 +34,18 @@ export default function VideoBuilder() {
   const [quality, setQuality] = useState<"720" | "1080">("1080");
 
   // UI states
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [isUploadingAssets, setIsUploadingAssets] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
 
   const doneJobs = useMemo(
-    () => jobs.filter((j) => (j.status || "").toLowerCase() === "done" && j.file),
+    () => jobs.filter((j) => j.status === "done" && j.file),
     [jobs]
   );
 
   async function loadJobs() {
     try {
-      const res = await fetch(`${API}/api/jobs`);
+      const res = await fetch("/api/jobs");
       const data = await res.json();
       setJobs(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -76,7 +66,7 @@ export default function VideoBuilder() {
     // jadi audio juga kita upload via field "video" agar kompatibel
     form.append("video", file);
 
-    const res = await fetch(`${API}/api/upload`, {
+    const res = await fetch("/api/upload", {
       method: "POST",
       body: form,
     });
@@ -151,7 +141,7 @@ export default function VideoBuilder() {
               },
       };
 
-      const res = await fetch(`${API}/api/render`, {
+      const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

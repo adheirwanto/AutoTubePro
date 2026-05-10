@@ -165,6 +165,16 @@ function resolveUploadFile(name: string): string | null {
   return fs.existsSync(candidate) ? candidate : null;
 }
 
+function resolveVideoFile(name: string): string | null {
+  const clean = sanitizeUploadName(name);
+  if (!clean) return null;
+  const inUploads = path.join(UPLOADS_DIR, clean);
+  if (fs.existsSync(inUploads)) return inUploads;
+  const inRenders = path.join(RENDERS_DIR, clean);
+  if (fs.existsSync(inRenders)) return inRenders;
+  return null;
+}
+
 function checkFfmpeg(): { ok: boolean; bin: string } {
   const bin = process.env.FFMPEG_PATH || "ffmpeg";
   const probe = spawnSync(bin, ["-version"], { stdio: "ignore" });
@@ -540,24 +550,24 @@ function startRender(job: RenderJob, opts: RenderOptions): void {
 
 // --- Routes: Queue ---
 
-app.post("/api/queue", (req, res) => {
-  const { accountId, videoPath } = req.body || {};
+function createQueueItem(body: Record<string, unknown>): { item?: QueueItem; error?: string } {
+  const { accountId, videoPath } = body || {};
   if (!accountId || typeof accountId !== "string") {
-    return res.status(400).json({ error: "accountId is required" });
+    return { error: "accountId is required" };
   }
   if (!videoPath || typeof videoPath !== "string") {
-    return res.status(400).json({ error: "videoPath is required" });
+    return { error: "videoPath is required" };
   }
 
   const item: QueueItem = {
     id: uuidv4(),
     accountId,
     videoPath,
-    title: req.body.title || "Untitled",
-    description: req.body.description || "",
-    tags: req.body.tags || [],
-    privacyStatus: req.body.privacyStatus || "private",
-    publishAt: req.body.publishAt || null,
+    title: (body.title as string) || "Untitled",
+    description: (body.description as string) || "",
+    tags: (body.tags as string[]) || [],
+    privacyStatus: (body.privacyStatus as string) || "private",
+    publishAt: (body.publishAt as string) || null,
     status: "pending",
     attempts: 0,
   };
@@ -565,7 +575,15 @@ app.post("/api/queue", (req, res) => {
   queue.push(item);
   writeJsonSafe(QUEUE_FILE, queue);
   void processQueue();
-  res.json(item);
+  return { item };
+}
+
+app.post("/api/queue", (req, res) => {
+  const result = createQueueItem(req.body || {});
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.json(result.item);
 });
 
 app.get("/api/queue", (_, res) => {
@@ -575,31 +593,11 @@ app.get("/api/queue", (_, res) => {
 // --- Routes: Upload YouTube ---
 
 app.post("/api/upload-youtube", (req, res) => {
-  const { accountId, videoPath } = req.body || {};
-  if (!accountId || typeof accountId !== "string") {
-    return res.status(400).json({ error: "accountId is required" });
+  const result = createQueueItem(req.body || {});
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
   }
-  if (!videoPath || typeof videoPath !== "string") {
-    return res.status(400).json({ error: "videoPath is required" });
-  }
-
-  const item: QueueItem = {
-    id: uuidv4(),
-    accountId,
-    videoPath,
-    title: req.body.title || "Untitled",
-    description: req.body.description || "",
-    tags: req.body.tags || [],
-    privacyStatus: req.body.privacyStatus || "private",
-    publishAt: req.body.publishAt || null,
-    status: "pending",
-    attempts: 0,
-  };
-
-  queue.push(item);
-  writeJsonSafe(QUEUE_FILE, queue);
-  void processQueue();
-  res.json(item);
+  res.json(result.item);
 });
 
 // --- Routes: Streaming ---
@@ -616,11 +614,16 @@ app.post("/api/stream/start", (req, res) => {
     return res.status(400).json({ error: "streamKey is required" });
   }
 
+  const resolvedPath = resolveVideoFile(videoPath);
+  if (!resolvedPath) {
+    return res.status(400).json({ error: "videoPath not found in uploads or renders directory" });
+  }
+
   const ffmpegBin = process.env.FFMPEG_PATH || "ffmpeg";
   const args = [
     "-re",
     "-stream_loop", "-1",
-    "-i", videoPath,
+    "-i", resolvedPath,
     "-c", "copy",
     "-f", "flv",
     `${rtmpUrl}/${streamKey}`,
@@ -771,10 +774,13 @@ app.post("/api/bulk-schedule", (req, res) => {
   const { startDate, intervalHours, total } = req.body || {};
   const start = new Date(startDate);
   const step = Number(intervalHours);
-  const count = Number(total);
+  const count = Math.min(Number(total) || 0, 1000);
 
   if (!startDate || Number.isNaN(start.getTime())) {
     return res.status(400).json({ error: "invalid date" });
+  }
+  if (!step || step <= 0) {
+    return res.status(400).json({ error: "intervalHours must be greater than 0" });
   }
 
   const dates: string[] = [];
@@ -805,6 +811,14 @@ httpServer.listen(PORT, () => {
 
 function shutdown(): void {
   console.log("Shutting down...");
+  for (const [id, proc] of streamProcesses) {
+    try {
+      proc.kill("SIGTERM");
+    } catch {
+      // process may already be dead
+    }
+    streamProcesses.delete(id);
+  }
   httpServer.close(() => { process.exit(0); });
   setTimeout(() => process.exit(1), 5000);
 }
