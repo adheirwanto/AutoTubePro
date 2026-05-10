@@ -6,23 +6,18 @@ import {
   Play
 } from "lucide-react";
 import { getSocket } from "../lib/socket";
-
-// 🔥 FIX: SATU SUMBER API
-const API_URL = "http://localhost:3000";
+import { RenderJob } from "../types";
 
 export default function RenderQueue() {
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
 
     const fetchJobs = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/jobs`);
+        const res = await fetch('/api/jobs');
         const data = await res.json();
-
-        console.log("📦 JOBS:", data);
-
         setJobs(Array.isArray(data) ? data.reverse() : []);
       } catch (err) {
         console.error("Fetch error:", err);
@@ -36,16 +31,9 @@ export default function RenderQueue() {
 
     const socket = getSocket();
 
-    // 🔥 penting: clear dulu biar ga double listener
     socket.off("job_update");
 
-    socket.on("connect", () => {
-      console.log("🔥 SOCKET CONNECTED:", socket.id);
-    });
-
-    socket.on("job_update", (updatedJob: any) => {
-      console.log("⚡ UPDATE:", updatedJob);
-
+    socket.on("job_update", (updatedJob: RenderJob) => {
       setJobs(prev => {
         const index = prev.findIndex(j => j.id === updatedJob.id);
 
@@ -60,7 +48,6 @@ export default function RenderQueue() {
 
     return () => {
       socket.off("job_update");
-      socket.off("connect");
     };
 
   }, []);
@@ -92,10 +79,10 @@ export default function RenderQueue() {
 
 // ================= CARD =================
 
-function RenderJobCard({ job, setJobs }: any) {
+function RenderJobCard({ job, setJobs }: { job: RenderJob; setJobs: React.Dispatch<React.SetStateAction<RenderJob[]>> }) {
 
   const videoUrl = job?.file
-    ? `${API_URL}/renders/${job.file}`
+    ? `/renders/${job.file}`
     : null;
 
   const formatTime = (sec: number) => {
@@ -108,19 +95,15 @@ function RenderJobCard({ job, setJobs }: any) {
     return `${h > 0 ? h + "h " : ""}${m}m ${s}s`;
   };
 
-  const remaining = job?.duration
-    ? Math.max(job.duration - (job.elapsed || 0), 0)
-    : 0;
-
   const handleDelete = async () => {
     if (!confirm("Hapus job ini?")) return;
 
     try {
-      await fetch(`${API_URL}/api/jobs/${job.id}`, {
+      await fetch(`/api/jobs/${job.id}`, {
         method: "DELETE"
       });
 
-      setJobs((prev: any[]) => prev.filter(j => j.id !== job.id));
+      setJobs((prev) => prev.filter(j => j.id !== job.id));
     } catch (err) {
       console.error("Delete error:", err);
       alert("Gagal hapus job");
@@ -198,11 +181,10 @@ function RenderJobCard({ job, setJobs }: any) {
       {/* INFO */}
       {job?.status === "processing" && (
         <div className="flex justify-between text-xs text-gray-400">
-          <span>⏱ {formatTime(job?.elapsed)}</span>
+          <span>{formatTime(job?.duration)}</span>
           <span className="text-cyan-400 font-mono">
             {Math.floor(job?.progress || 0)}%
           </span>
-          <span>⏳ {formatTime(remaining)}</span>
         </div>
       )}
     </div>

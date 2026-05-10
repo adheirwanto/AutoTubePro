@@ -3,59 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Autotube</title>
-    <script>
-      // Global JSON.parse safety net
-      (function() {
-        const originalParse = JSON.parse;
-        JSON.parse = function(text, reviver) {
-          if (text === 'undefined' || text === undefined) {
-            console.warn('JSON.parse intercepted undefined value - returning null');
-            return null;
-          }
-          try {
-            return originalParse(text, reviver);
-          } catch (e) {
-            console.error('JSON.parse error on input:', text);
-            return null;
-          }
-        };
-
-        // Wrap Response.json() as well because it might bypass global JSON.parse
-        const originalResJson = Response.prototype.json;
-        Response.prototype.json = function() {
-          return this.text().then(text => {
-            if (!text || text.trim() === 'undefined' || text.trim() === '') return null;
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              return null;
-            }
-          });
-        };
-      })();
-
-      // Debug: Catch fetch overrides
-      (function() {
-        try {
-          const originalFetch = window.fetch;
-          Object.defineProperty(window, 'fetch', {
-            get: function() { return originalFetch; },
-            set: function(val) {
-              console.warn('Something tried to set window.fetch:', val);
-              console.trace();
-            },
-            configurable: true
-          });
-        } catch (e) {
-          console.error('Failed to setup fetch guard:', e);
-        }
-      })();
-    </script>
+    <title>AutoTubePro</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -1,40 +1,70 @@
-export type JobStatus = 'waiting' | 'processing' | 'done' | 'failed';
+export interface Account {
+  id: string;
+  name: string;
+  avatar: string;
+  subscribers: string;
+  channelId: string;
+  projectId: string;
+  tokens: {
+    access_token?: string;
+    refresh_token?: string;
+    expiry_date?: number;
+  };
+}
+
+export interface Project {
+  id: string;
+  client_id: string;
+  client_secret: string;
+}
 
 export interface RenderJob {
   id: string;
-  status: JobStatus;
+  status: 'processing' | 'done' | 'failed';
   progress: number;
-  startTime: number;
-  videoPath: string;
-  audioPath?: string;
-  outputPath: string;
   duration: number;
-  error?: string;
+  quality: string;
+  file: string | null;
+  error: string | null;
+  url?: string;
+  createdAt: string;
 }
 
-export interface YouTubeAccount {
+export interface QueueItem {
   id: string;
-  name: string;
-  email: string;
-  connected: boolean;
+  accountId: string;
+  videoPath: string;
+  title: string;
+  description: string;
+  tags: string[];
+  privacyStatus: string;
+  publishAt?: string | null;
+  status: 'pending' | 'uploading' | 'done' | 'failed';
+  attempts: number;
+  error?: string | null;
+  videoId?: string;
+}
+
+export interface SystemUsage {
+  cpu: number;
+  ram: number;
+  gpu: number | null;
+  processing: number;
+  done: number;
+  failed: number;
+  pending: number;
+  uploading: number;
+  totalJobs: number;
+  totalQueue: number;
+  uptime: number;
+  timestamp: number;
 }
 
 export interface LiveStream {
   id: string;
-  accountId: string;
-  status: 'live' | 'offline';
-  bitrate: number;
-  startTime?: number;
-}
-
-export interface ScheduledUpload {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-  thumbnailUrl?: string;
   videoPath: string;
-  accountId: string;
-  scheduledTime: string;
-  status: 'waiting' | 'uploading' | 'scheduled' | 'published' | 'failed';
+  rtmpUrl: string;
+  streamKey: string;
+  status: 'live' | 'stopped';
+  pid?: number;
 }
